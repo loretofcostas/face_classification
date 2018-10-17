@@ -3,6 +3,7 @@ from statistics import mode
 import cv2
 from keras.models import load_model
 import numpy as np
+import time
 
 from utils.datasets import get_labels
 from utils.inference import detect_faces
@@ -22,12 +23,13 @@ frame_window = 10
 emotion_offsets = (20, 40)
 
 # loading models
+#t1 = time.time()
 face_detection = load_detection_model(detection_model_path)
 emotion_classifier = load_model(emotion_model_path, compile=False)
 
 # getting input model shapes for inference
-emotion_target_size = emotion_classifier.input_shape[1:3]
-
+emotion_target_size = emotion_classifier.input_shape[1:3] #emotion target size (64, 64)
+    
 # starting lists for calculating modes
 emotion_window = []
 
@@ -35,7 +37,8 @@ emotion_window = []
 cv2.namedWindow('window_frame')
 video_capture = cv2.VideoCapture(0)
 while True:
-    bgr_image = video_capture.read()[1]
+    bgr_image = cv2.flip(video_capture.read()[1],1)
+    #bgr_image = video_capture.read()[1]
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
     faces = detect_faces(face_detection, gray_image)
@@ -52,10 +55,17 @@ while True:
         gray_face = preprocess_input(gray_face, True)
         gray_face = np.expand_dims(gray_face, 0)
         gray_face = np.expand_dims(gray_face, -1)
+
         emotion_prediction = emotion_classifier.predict(gray_face)
+        #[[ angry 1.36565328e-01   disgust 2.20752245e-05  fear 8.08805823e-02  happy 6.48011118e-02  sad 6.36823952e-01  surprise 3.33598023e-03  neutral 7.75709748e-02]]
+        #t2 = time.time()
+        #print(t2-t1)
+        #emotion_proba
         emotion_probability = np.max(emotion_prediction)
+        #print("la prediccion es {}".format(emotion_prediction))
         emotion_label_arg = np.argmax(emotion_prediction)
         emotion_text = emotion_labels[emotion_label_arg]
+        #print("las labels son {}".format(emotion_labels))
         emotion_window.append(emotion_text)
 
         if len(emotion_window) > frame_window:
