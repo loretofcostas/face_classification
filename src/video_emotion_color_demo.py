@@ -12,6 +12,34 @@ from utils.inference import draw_bounding_box
 from utils.inference import apply_offsets
 from utils.inference import load_detection_model
 from utils.preprocessor import preprocess_input
+from collections import deque
+
+# weights for each of the last five states
+arr_prob = [0.05, 0.1, 0.15, 0.3, 0.4]   #total 1 
+
+# function that calculates a weighted relation for each emotion with its own previous states
+def weigh_up_emotion(arr):
+    real_prob = 0
+    arr_weighted = deque()
+    #mean_last_states = deque()
+    weighted_happy = 0
+    weighted_sad = 0
+    weighted_angry = 0
+    weighted_fear = 0
+    weighted_neutral = 0
+
+    for i in range(len(arr)):
+        for j in arr[i]:
+            arr_weighted = j*arr_prob[i]
+            weighted_happy += arr_weighted[3]
+            weighted_sad += arr_weighted[4]
+            weighted_angry += (arr_weighted[0] + arr_weighted[1])/2
+            weighted_fear += (arr_weighted[2] + arr_weighted[5])/2
+            weighted_neutral += arr_weighted[6]
+    
+    mean_last_states = [weighted_angry, weighted_angry, weighted_fear, weighted_happy, weighted_sad, weighted_fear, weighted_neutral]
+    print(mean_last_states)
+    return mean_last_states
 
 # parameters for loading data and images
 detection_model_path = '../trained_models/detection_models/haarcascade_frontalface_default.xml'
@@ -35,6 +63,7 @@ emotion_window = []
 
 # starting video streaming
 cv2.namedWindow('window_frame')
+emotions_collected = deque()
 video_capture = cv2.VideoCapture(0)
 while True:
     bgr_image = cv2.flip(video_capture.read()[1],1)
@@ -61,12 +90,32 @@ while True:
         #t2 = time.time()
         #print(t2-t1)
         #emotion_proba
-        emotion_probability = np.max(emotion_prediction)
-        #print("la prediccion es {}".format(emotion_prediction))
-        emotion_label_arg = np.argmax(emotion_prediction)
-        emotion_text = emotion_labels[emotion_label_arg]
-        #print("las labels son {}".format(emotion_labels))
-        emotion_window.append(emotion_text)
+        
+        if len(emotions_collected) < 4:
+            emotions_collected.append(emotion_prediction)
+        else:
+            emotions_collected.append(emotion_prediction)
+            weighted_face_in_time = weigh_up_emotion(emotions_collected)
+            emotions_collected = []
+            #emotions_collected.popleft()
+            print("la cara historica es {}".format(weighted_face_in_time))
+            print("la cara original era {}".format(emotion_prediction))
+
+            
+            #old
+            emotion_probability = np.max(emotion_prediction)
+            emotion_label_arg = np.argmax(emotion_prediction)
+            emotion_text = emotion_labels[emotion_label_arg]
+
+            #new
+            emotion_probability_weighted = np.max(weighted_face_in_time)
+            emotion_label_arg_weighted = np.argmax(weighted_face_in_time)    
+            emotion_text_weighted = emotion_labels[emotion_label_arg_weighted]
+            
+
+            #print("las labels son {}".format(emotion_labels))
+            emotion_window.append(emotion_text_weighted)
+            emotion_window.append(emotion_text)
 
         if len(emotion_window) > frame_window:
             emotion_window.pop(0)
@@ -86,12 +135,29 @@ while True:
         else:
             color = emotion_probability * np.asarray((0, 255, 0))
 
+        if emotion_text_weighted == 'angry':
+            color_weighted = emotion_probability_weighted * np.asarray((255, 0, 0))
+        elif emotion_text_weighted == 'sad':
+            color_weighted = emotion_probability_weighted * np.asarray((0, 0, 255))
+        elif emotion_text_weighted == 'happy':
+            color_weighted = emotion_probability_weighted * np.asarray((255, 255, 0))
+        elif emotion_text_weighted == 'surprise':
+            color_weighted = emotion_probability_weighted * np.asarray((0, 255, 255))
+        else:
+            color_weighted = emotion_probability_weighted * np.asarray((0, 255, 0))
+
         color = color.astype(int)
         color = color.tolist()
+
+        color_weighted = color_weighted.astype(int)
+        color_weighted = color_weighted.tolist()
 
         draw_bounding_box(face_coordinates, rgb_image, color)
         draw_text(face_coordinates, rgb_image, emotion_mode,
                   color, 0, -45, 1, 1)
+        draw_bounding_box(face_coordinates, rgb_image, color_weighted)
+        draw_text(face_coordinates, rgb_image, emotion_mode,
+                  color_weighted, 200, -45, 1, 1)
 
     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
     cv2.imshow('window_frame', bgr_image)
