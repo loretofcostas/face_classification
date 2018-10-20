@@ -1,6 +1,7 @@
 from statistics import mode
 
 import cv2
+import logging, sys, time
 from keras.models import load_model
 import numpy as np
 
@@ -31,16 +32,25 @@ emotion_target_size = emotion_classifier.input_shape[1:3]
 # starting lists for calculating modes
 emotion_window = []
 
+# Initialize logger
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(sys.argv[0].split('/')[-1])
+
 # starting video streaming
 cv2.namedWindow('window_frame')
 video_capture = cv2.VideoCapture(0)
+
+# Count frames just for debugging purposes
+nframe = 1
 while True:
     bgr_image = video_capture.read()[1]
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
     faces = detect_faces(face_detection, gray_image)
-
+    logger.debug("frame {}: {} faces detected.".format(nframe, faces.__len__()))
+    nface = 1
     for face_coordinates in faces:
+
 
         x1, x2, y1, y2 = apply_offsets(face_coordinates, emotion_offsets)
         gray_face = gray_image[y1:y2, x1:x2]
@@ -58,6 +68,11 @@ while True:
         emotion_text = emotion_labels[emotion_label_arg]
         emotion_window.append(emotion_text)
 
+        logger.debug("frame {}, face {}, emotion: {}, probability: {:5.4f} ".format(nframe, nface, emotion_text, emotion_probability))
+
+        # TODO: So far, at a prediction level, it seems to be working okay with several faces. Weird things should be happenning at video representation level
+
+
         if len(emotion_window) > frame_window:
             emotion_window.pop(0)
         try:
@@ -66,15 +81,15 @@ while True:
             continue
 
         if emotion_text == 'angry':
-            color = emotion_probability * np.asarray((255, 0, 0))
+            color =  np.asarray((255, 0, 0))
         elif emotion_text == 'sad':
-            color = emotion_probability * np.asarray((0, 0, 255))
+            color =  np.asarray((0, 0, 255))
         elif emotion_text == 'happy':
-            color = emotion_probability * np.asarray((255, 255, 0))
+            color =  np.asarray((255, 255, 0))
         elif emotion_text == 'surprise':
-            color = emotion_probability * np.asarray((0, 255, 255))
+            color =  np.asarray((0, 255, 255))
         else:
-            color = emotion_probability * np.asarray((0, 255, 0))
+            color =  np.asarray((0, 255, 0))
 
         color = color.astype(int)
         color = color.tolist()
@@ -83,7 +98,11 @@ while True:
         draw_text(face_coordinates, rgb_image, emotion_mode,
                   color, 0, -45, 1, 1)
 
+        nface += 1
+
     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
     cv2.imshow('window_frame', bgr_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+    nframe += 1
