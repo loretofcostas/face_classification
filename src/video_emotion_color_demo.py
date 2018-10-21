@@ -3,7 +3,7 @@ from statistics import mode
 import cv2
 from keras.models import load_model
 import numpy as np
-import time
+import traceback
 
 from utils.datasets import get_labels
 from utils.inference import detect_faces
@@ -38,7 +38,6 @@ def weigh_up_emotion(arr):
             weighted_neutral += arr_weighted[6]
     
     mean_last_states = [weighted_angry, weighted_angry, weighted_fear, weighted_happy, weighted_sad, weighted_fear, weighted_neutral]
-    print(mean_last_states)
     return mean_last_states
 
 # parameters for loading data and images
@@ -51,7 +50,6 @@ frame_window = 10
 emotion_offsets = (20, 40)
 
 # loading models
-#t1 = time.time()
 face_detection = load_detection_model(detection_model_path)
 emotion_classifier = load_model(emotion_model_path, compile=False)
 
@@ -71,6 +69,7 @@ while True:
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
     faces = detect_faces(face_detection, gray_image)
+    happy_max = 0
 
     for face_coordinates in faces:
 
@@ -87,10 +86,7 @@ while True:
 
         emotion_prediction = emotion_classifier.predict(gray_face)
         #[[ angry 1.36565328e-01   disgust 2.20752245e-05  fear 8.08805823e-02  happy 6.48011118e-02  sad 6.36823952e-01  surprise 3.33598023e-03  neutral 7.75709748e-02]]
-        #t2 = time.time()
-        #print(t2-t1)
-        #emotion_proba
-        
+
         if len(emotions_collected) < 4:
             emotions_collected.append(emotion_prediction)
         else:
@@ -98,63 +94,45 @@ while True:
             weighted_face_in_time = weigh_up_emotion(emotions_collected)
             emotions_collected = []
             #emotions_collected.popleft()
-            print("la cara historica es {}".format(weighted_face_in_time))
-            print("la cara original era {}".format(emotion_prediction))
-
-            
-            #old
-            emotion_probability = np.max(emotion_prediction)
-            emotion_label_arg = np.argmax(emotion_prediction)
-            emotion_text = emotion_labels[emotion_label_arg]
 
             #new
+            #selecting maximum emotion along the last 5 frames
             emotion_probability_weighted = np.max(weighted_face_in_time)
             emotion_label_arg_weighted = np.argmax(weighted_face_in_time)    
             emotion_text_weighted = emotion_labels[emotion_label_arg_weighted]
-            
-
-            #print("las labels son {}".format(emotion_labels))
             emotion_window.append(emotion_text_weighted)
-            emotion_window.append(emotion_text)
+
+
+            #keeping maximum instant of happiness
+            if emotion_text_weighted == 'happy' and happy_max < emotion_probability_weighted:
+                happy_max = emotion_probability_weighted
+                bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+                cv2.imwrite('../images/predicted_test_image.png', bgr_image)
 
         if len(emotion_window) > frame_window:
-            emotion_window.pop(0)
+                emotion_window.pop(0)
         try:
             emotion_mode = mode(emotion_window)
         except:
+            traceback.print_exc()
             continue
 
-        if emotion_text == 'angry':
-            color = emotion_probability * np.asarray((255, 0, 0))
-        elif emotion_text == 'sad':
-            color = emotion_probability * np.asarray((0, 0, 255))
-        elif emotion_text == 'happy':
-            color = emotion_probability * np.asarray((255, 255, 0))
-        elif emotion_text == 'surprise':
-            color = emotion_probability * np.asarray((0, 255, 255))
-        else:
-            color = emotion_probability * np.asarray((0, 255, 0))
-
+        #coloring the selected emotion
         if emotion_text_weighted == 'angry':
             color_weighted = emotion_probability_weighted * np.asarray((255, 0, 0))
         elif emotion_text_weighted == 'sad':
             color_weighted = emotion_probability_weighted * np.asarray((0, 0, 255))
         elif emotion_text_weighted == 'happy':
             color_weighted = emotion_probability_weighted * np.asarray((255, 255, 0))
-        elif emotion_text_weighted == 'surprise':
+        elif emotion_text_weighted == 'fear':
             color_weighted = emotion_probability_weighted * np.asarray((0, 255, 255))
         else:
             color_weighted = emotion_probability_weighted * np.asarray((0, 255, 0))
 
-        color = color.astype(int)
-        color = color.tolist()
-
         color_weighted = color_weighted.astype(int)
         color_weighted = color_weighted.tolist()
 
-        draw_bounding_box(face_coordinates, rgb_image, color)
-        draw_text(face_coordinates, rgb_image, emotion_mode,
-                  color, 0, -45, 1, 1)
+        #drawing box and text in the video
         draw_bounding_box(face_coordinates, rgb_image, color_weighted)
         draw_text(face_coordinates, rgb_image, emotion_mode,
                   color_weighted, 200, -45, 1, 1)
