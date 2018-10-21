@@ -63,13 +63,14 @@ emotion_window = []
 cv2.namedWindow('window_frame')
 emotions_collected = deque()
 video_capture = cv2.VideoCapture(0)
+happy_max = 0
+
 while True:
     bgr_image = cv2.flip(video_capture.read()[1],1)
     #bgr_image = video_capture.read()[1]
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
     faces = detect_faces(face_detection, gray_image)
-    happy_max = 0
 
     for face_coordinates in faces:
 
@@ -114,7 +115,6 @@ while True:
         try:
             emotion_mode = mode(emotion_window)
         except:
-            traceback.print_exc()
             continue
 
         #coloring the selected emotion
@@ -133,9 +133,9 @@ while True:
         color_weighted = color_weighted.tolist()
 
         #drawing box and text in the video
-        draw_bounding_box(face_coordinates, rgb_image, color_weighted)
         draw_text(face_coordinates, rgb_image, emotion_mode,
-                  color_weighted, 200, -45, 1, 1)
+                  color_weighted, 0, -45, 1, 1)
+        draw_bounding_box(face_coordinates, rgb_image, color_weighted)
 
     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
     cv2.imshow('window_frame', bgr_image)
