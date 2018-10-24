@@ -67,7 +67,7 @@ logger = logging.getLogger(sys.argv[0].split('/')[-1])
 # starting video streaming
 cv2.namedWindow('window_frame')
 emotions_collected = deque()
-video_capture = cv2.VideoCapture(0)
+video_capture = cv2.VideoCapture(1)
 happy_max = 0
 
 
@@ -81,7 +81,9 @@ plt.close('all')
 f, axarr = plt.subplots(2, 1)
 i = 0
 x_axis = []
-y_axis = []
+y_axis_happiness = []
+y_axis_angriness = []
+lista = []
 
 while True:
     bgr_image = cv2.flip(video_capture.read()[1],1)
@@ -108,6 +110,7 @@ while True:
         emotion_prediction = emotion_classifier.predict(gray_face)
         #[[ angry 1.36565328e-01   disgust 2.20752245e-05  fear 8.08805823e-02  happy 6.48011118e-02  sad 6.36823952e-01  surprise 3.33598023e-03  neutral 7.75709748e-02]]
 
+        #Calculating parameters for diagram drawing
         angry_prob = emotion_prediction[0][0] + emotion_prediction[0][1]
         fear_prob = emotion_prediction[0][2] + emotion_prediction[0][5]
         happy_prob = emotion_prediction[0][3]
@@ -116,25 +119,29 @@ while True:
         instant_happiness = happy_prob - sad_prob
         instant_angriness = angry_prob - fear_prob
 
-        # Simple data to display in various form
-        # y = np.sin(x ** 2)
-
-        # axarr.plot(x, y, c='g')
-        now = time.time() - time_init  # type: float
+        # time calculation for x-axis
+        now = time.time() - time_init
         x_axis.append(now)
-        y_axis.append(instant_happiness)
-        # time_init = now
-        #axarr.plot(x_axis, y_axis)
+
+        # emotion intensity for y-axis
+        y_axis_happiness.append(instant_happiness)
+        y_axis_angriness.append(instant_angriness)
+
         # Drawing "Emotions during time" diagram
         axarr[0].set_xlim(now-5.0, now+5.0)
         axarr[0].set_ylim(-1.0, 1.0)
         axarr[0].spines['bottom'].set_position('zero')
-        axarr[0].plot(x_axis, y_axis, c='b')
+        axarr[0].plot(x_axis, y_axis_happiness, c='b')
+        axarr[0].plot(x_axis, y_axis_angriness, c='r')
         axarr[0].spines["top"].set_visible(False)
         axarr[0].spines["right"].set_visible(False)
-
         axarr[0].grid(False)
         axarr[0].set_title('Emotions during time')
+
+        #writing data for postprocessing
+        with open('/home/lfernandez/spaceai/your_file.txt', 'a') as f:
+            f.write("%s\n" % str([now, instant_happiness, instant_angriness]))
+        f.close()
 
         # Drawing "Emotional Landscape" diagram
         axarr[1].spines['left'].set_position('zero')
@@ -144,59 +151,13 @@ while True:
         axarr[1].set_xlim(-1.0, 1.0)
         axarr[1].set_ylim(-1.0, 1.0)
         axarr[1].grid(False)
-        axarr[1].scatter(instant_happiness, instant_angriness, c='g')
+        axarr[1].scatter(instant_happiness, instant_angriness, c='#37b5e4', s=10)
         axarr[1].set_title('Emotional Landscape')
 
         # Saving diagram
-        plt.savefig('/home/lfernandez/spaceai/prueba.png')
-
-        #################################################################
-        # # # drawing "Emotional Landscape" diagram
-        # ax1 = plt.axes()  # standard axes
-        # ax1.spines['left'].set_position('zero')
-        # ax1.spines['bottom'].set_position('zero')
-        # ax1.set_xlim(-1.0, 1.0)
-        # ax1.set_ylim(-1.0, 1.0)
-        # ax1.set_xlabel('sad-happy', fontsize=9, x=1, y=1)
-        # ax1.set_ylabel('fear-angry', fontsize=9, x=1, y=1)
-        # ax1.scatter(instant_happiness, instant_angriness, c='g')
-        # ax1.set_title('Emotional Landscape')
-        # # plt.savefig('/home/lfernandez/spaceai/emotional_landscape.png')
-        #
-        # # drawing diagram
-        # ax2 = plt.subplot(222, frameon=False)
-        # #fig2 = plt.figure()
-        # ax2.set_ylim(-1.0, 1.0)
-        # ax2.set_xlabel('time (s)', fontsize=9, x=1, y=1)
-        # ax2.set_ylabel('emotion intensity', fontsize=9, x=1, y=1)
-        # now = time.time() - time_init
-        # time_init = now
-        # ax2.plot(now, instant_happiness, '-', label='happy-sad')
-        # ax2.plot(now, instant_angriness, '-', label='fear-angry')
-        # plt.savefig('/home/lfernandez/spaceai/diagram.png')
+        plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
 
 
-        ###
-        # fig, ax = plt.subplots()
-        # ax.scatter(instant_happiness, instant_angriness)
-        # ax.spines['left'].set_position('center')
-        # ax.spines['bottom'].set_position('center')
-        # ax.spines['right'].set_color('none')
-        # ax.spines['top'].set_color('none')
-        # ax.set_xlabel('sad-happy')
-        # ax.set_ylabel('fear-angry')
-        # plt.axis([-1, 1, -1, 1])
-
-        #ax.scatter(delta1[:-1], delta1[1:], c=close, s=volume, alpha=0.5)
-
-        #
-        # ax.set_title('Emotion map')
-        #
-        # ax.grid(False)
-        # #fig.tight_layout()
-        # ax.savefig('../images/diagram.png')
-        ###
-################################################################
 
         if len(emotions_collected) < 4:
             emotions_collected.append(emotion_prediction)
@@ -209,7 +170,6 @@ while True:
             emotions_collected = []
             #emotions_collected.popleft()
 
-            #new
             #selecting maximum emotion along the last 5 frames
             emotion_probability_weighted = np.max(weighted_face_in_time)
             emotion_label_arg_weighted = np.argmax(weighted_face_in_time)
@@ -232,6 +192,7 @@ while True:
         # except:
         #     continue
 
+        #Video printing
         #coloring the selected emotion
         if emotion_text_weighted == 'angry':
             color_weighted = emotion_probability_weighted * np.asarray((255, 0, 0))
