@@ -47,7 +47,7 @@ emotion_model_path = '../trained_models/emotion_models/fer2013_mini_XCEPTION.102
 emotion_labels = get_labels('fer2013')
 
 # hyper-parameters for bounding boxes shape
-frame_window = 10
+frame_window = 5
 emotion_offsets = (20, 40)
 
 # loading models
@@ -84,6 +84,7 @@ x_axis = []
 y_axis_happiness = []
 y_axis_angriness = []
 lista = []
+label = False
 
 while True:
     bgr_image = cv2.flip(video_capture.read()[1],1)
@@ -131,12 +132,20 @@ while True:
         axarr[0].set_xlim(now-5.0, now+5.0)
         axarr[0].set_ylim(-1.0, 1.0)
         axarr[0].spines['bottom'].set_position('zero')
-        axarr[0].plot(x_axis, y_axis_happiness, c='b')
-        axarr[0].plot(x_axis, y_axis_angriness, c='r')
+        if label == False:
+            axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
+            axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
+            label = True
+        else:
+            axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
+            axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
+        axarr[0].set_xlabel('time')
+        axarr[0].set_ylabel('Emotion intensity')
         axarr[0].spines["top"].set_visible(False)
         axarr[0].spines["right"].set_visible(False)
         axarr[0].grid(False)
         axarr[0].set_title('Emotions during time')
+        plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
 
         #writing data for postprocessing
         with open('/home/lfernandez/spaceai/your_file.txt', 'a') as f:
@@ -153,10 +162,17 @@ while True:
         axarr[1].grid(False)
         axarr[1].scatter(instant_happiness, instant_angriness, c='#37b5e4', s=10)
         axarr[1].set_title('Emotional Landscape')
+        axarr[1].annotate('fear',
+                          xy=(245, 30), xycoords='figure points')
+        axarr[1].annotate('angry',
+                          xy=(245, 150), xycoords='figure points')
+        axarr[1].annotate('happy',
+                          xy=(400, 100), xycoords='figure points')
+        axarr[1].annotate('sad',
+                          xy=(40, 100), xycoords='figure points')
 
         # Saving diagram
         plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
-
 
 
         if len(emotions_collected) < 4:
