@@ -1,9 +1,9 @@
-
 import cv2
 import logging, sys, time
 from keras.models import load_model
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 from utils.datasets import get_labels
 from utils.inference import detect_faces
@@ -67,9 +67,8 @@ logger = logging.getLogger(sys.argv[0].split('/')[-1])
 # starting video streaming
 cv2.namedWindow('window_frame')
 emotions_collected = deque()
-video_capture = cv2.VideoCapture(1)
+video_capture = cv2.VideoCapture(0)
 happy_max = 0
-
 
 # Count frames just for debugging purposes
 nframe = 1
@@ -84,9 +83,11 @@ x_axis = []
 y_axis_happiness = []
 y_axis_angriness = []
 lista = []
+emotion_list = deque()
 label = False
 
 while True:
+    #time_init = time.time()
     bgr_image = cv2.flip(video_capture.read()[1],1)
     #bgr_image = video_capture.read()[1]
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
@@ -117,63 +118,26 @@ while True:
         happy_prob = emotion_prediction[0][3]
         sad_prob = emotion_prediction[0][4]
 
-        instant_happiness = happy_prob - sad_prob
-        instant_angriness = angry_prob - fear_prob
+        #instant_happiness = happy_prob - sad_prob
+        #instant_surprise = angry_prob - fear_prob
+        #data = [instant_happiness, instant_surprise]
 
         # time calculation for x-axis
-        now = time.time() - time_init
-        x_axis.append(now)
-
-        # emotion intensity for y-axis
-        y_axis_happiness.append(instant_happiness)
-        y_axis_angriness.append(instant_angriness)
-
-        # Drawing "Emotions during time" diagram
-        axarr[0].set_xlim(now-5.0, now+5.0)
-        axarr[0].set_ylim(-1.0, 1.0)
-        axarr[0].spines['bottom'].set_position('zero')
-        if label == False:
-            axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
-            axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
-            label = True
-        else:
-            axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
-            axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
-        axarr[0].set_xlabel('time')
-        axarr[0].set_ylabel('Emotion intensity')
-        axarr[0].spines["top"].set_visible(False)
-        axarr[0].spines["right"].set_visible(False)
-        axarr[0].grid(False)
-        axarr[0].set_title('Emotions during time')
-        plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
+        #now = time.time() - time_init
+        epoch = time.time()
 
         #writing data for postprocessing
-        with open('/home/lfernandez/spaceai/your_file.txt', 'a') as f:
-            f.write("%s\n" % str([now, instant_happiness, instant_angriness]))
-        f.close()
+        #json
+        emotions = {
+            'epoch': str(epoch),
+            'angry': str(angry_prob),
+            'sad': str(sad_prob),
+            'surprise': str(fear_prob),
+            'happy': str(happy_prob)
+        }
 
-        # Drawing "Emotional Landscape" diagram
-        axarr[1].spines['left'].set_position('zero')
-        axarr[1].spines['bottom'].set_position('zero')
-        axarr[1].spines["top"].set_visible(False)
-        axarr[1].spines["right"].set_visible(False)
-        axarr[1].set_xlim(-1.0, 1.0)
-        axarr[1].set_ylim(-1.0, 1.0)
-        axarr[1].grid(False)
-        axarr[1].scatter(instant_happiness, instant_angriness, c='#37b5e4', s=10)
-        axarr[1].set_title('Emotional Landscape')
-        axarr[1].annotate('fear',
-                          xy=(245, 30), xycoords='figure points')
-        axarr[1].annotate('angry',
-                          xy=(245, 150), xycoords='figure points')
-        axarr[1].annotate('happy',
-                          xy=(400, 100), xycoords='figure points')
-        axarr[1].annotate('sad',
-                          xy=(40, 100), xycoords='figure points')
-
-        # Saving diagram
-        plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
-
+        with open('/home/lfernandez/spaceai/your_file.json', 'a') as outfile:
+            json.dump(emotions, outfile)
 
         if len(emotions_collected) < 4:
             emotions_collected.append(emotion_prediction)
@@ -203,10 +167,6 @@ while True:
 
         if len(emotion_window) > frame_window:
                 emotion_window.pop(0)
-        # try:
-        #     emotion_mode = mode(emotion_window)
-        # except:
-        #     continue
 
         #Video printing
         #coloring the selected emotion
@@ -216,7 +176,7 @@ while True:
             color_weighted = emotion_probability_weighted * np.asarray((0, 0, 255))
         elif emotion_text_weighted == 'happy':
             color_weighted = emotion_probability_weighted * np.asarray((255, 255, 0))
-        elif emotion_text_weighted == 'fear':
+        elif emotion_text_weighted == 'surprise':
             color_weighted = emotion_probability_weighted * np.asarray((0, 255, 255))
         else:
             color_weighted = emotion_probability_weighted * np.asarray((0, 255, 0))
@@ -228,6 +188,9 @@ while True:
         draw_text(face_coordinates, rgb_image, emotion_text_weighted,
                   color_weighted, 0, -45, 1, 1)
         draw_bounding_box(face_coordinates, rgb_image, color_weighted)
+        time_end = time.time()
+        time_total = time_end-time_init
+        print("time: {}".format(time_total))
 
         nface += 1
 
