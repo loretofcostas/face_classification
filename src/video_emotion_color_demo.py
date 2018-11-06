@@ -1,8 +1,9 @@
+import os
+
 import cv2
 import logging, sys, time
 from keras.models import load_model
 import numpy as np
-import matplotlib.pyplot as plt
 import json
 
 from utils.datasets import get_labels
@@ -72,12 +73,12 @@ happy_max = 0
 
 # Count frames just for debugging purposes
 nframe = 1
-happiness_diagram = deque()
-angriness_diagram = deque()
+#happiness_diagram = deque()
+#angriness_diagram = deque()
 point = 0
 
-plt.close('all')
-f, axarr = plt.subplots(2, 1)
+#plt.close('all')
+#f, axarr = plt.subplots(2, 1)
 i = 0
 x_axis = []
 y_axis_happiness = []
@@ -87,7 +88,6 @@ emotion_list = deque()
 label = False
 
 while True:
-    #time_init = time.time()
     bgr_image = cv2.flip(video_capture.read()[1],1)
     #bgr_image = video_capture.read()[1]
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
@@ -125,19 +125,25 @@ while True:
         # time calculation for x-axis
         #now = time.time() - time_init
         epoch = time.time()
+        clientId = os.environ["CLIENTID"]
 
-        #writing data for postprocessing
-        #json
-        emotions = {
+        # writing data for postprocessing
+        # json
+
+        output = {
+            'clientId': clientId,
             'epoch': str(epoch),
-            'angry': str(angry_prob),
-            'sad': str(sad_prob),
-            'surprise': str(fear_prob),
-            'happy': str(happy_prob)
+            'emotions': {
+                'angry': str(angry_prob),
+                'sad': str(sad_prob),
+                'surprise': str(fear_prob),
+                'happy': str(happy_prob)
+            }
         }
 
-        with open('/home/lfernandez/spaceai/your_file.json', 'a') as outfile:
-            json.dump(emotions, outfile)
+        with open('./your_file.json', 'a') as outfile:
+            json.dump(output, outfile)
+            outfile.write("\n")
 
         if len(emotions_collected) < 4:
             emotions_collected.append(emotion_prediction)
@@ -188,9 +194,6 @@ while True:
         draw_text(face_coordinates, rgb_image, emotion_text_weighted,
                   color_weighted, 0, -45, 1, 1)
         draw_bounding_box(face_coordinates, rgb_image, color_weighted)
-        time_end = time.time()
-        time_total = time_end-time_init
-        print("time: {}".format(time_total))
 
         nface += 1
 
