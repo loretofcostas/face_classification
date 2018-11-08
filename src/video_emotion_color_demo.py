@@ -23,25 +23,12 @@ from utils.inference import load_detection_model
 from utils.preprocessor import preprocess_input
 from collections import deque
 
-stream_ids = [u'edtelid9m0', u'u89qfmmye8']
 # weights for each of the last five states
 arr_prob = [0.05, 0.1, 0.15, 0.3, 0.4]   #total 1
-time_init = time.time()
-
-# # Get stream id from stream id list
-# stream_id = stream_ids[0]
-#
-# # Make instance of stream id object
-# stream_1 = go.Stream(
-#     token=stream_id,  # link stream id to 'token' key
-#     maxpoints=80      # keep a max of 80 pts on screen
-# )
+file = []
 
 # function that calculates a weighted relation for each emotion with its own previous states
 def weigh_up_emotion(arr):
-    real_prob = 0
-    arr_weighted = deque()
-    #mean_last_states = deque()
     weighted_happy = 0
     weighted_sad = 0
     weighted_angry = 0
@@ -85,37 +72,30 @@ logger = logging.getLogger(sys.argv[0].split('/')[-1])
 
 # starting video streaming
 cv2.namedWindow('window_frame')
-emotions_collected = deque()
 video_capture = cv2.VideoCapture(0)
+
+emotions_collected = deque()
+
 happy_max = 0
 
 # Count frames just for debugging purposes
 nframe = 1
-# happiness_diagram = deque()
-# angriness_diagram = deque()
-# point = 0
 
-i = 0
-x_axis = []
-y_axis_happiness = []
-y_axis_surprise = []
-time_list = []
-
-emotion_list = deque()
-label = False
-
-os.remove('/home/lfernandez/spaceai/your_file.json')
+# Delete file "your_file.json" from previous executions
+os.remove('/home/lfernandez/spaceai/emotions/feelings-api/your_file.json')
 
 while True:
-    time_init = time.time()
-    bgr_image = cv2.flip(video_capture.read()[1],1)
-    #bgr_image = video_capture.read()[1]
+    bgr_image = cv2.flip(video_capture.read()[1], 1)
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
     faces = detect_faces(face_detection, gray_image)
+
     logger.debug("frame {}: {} faces detected.".format(nframe, faces.__len__()))
+
+    # Count faces just for debugging purposes
     nface = 1
 
+    # Goes over each face on the frame
     for face_coordinates in faces:
 
         x1, x2, y1, y2 = apply_offsets(face_coordinates, emotion_offsets)
@@ -138,10 +118,15 @@ while True:
         happy_prob = emotion_prediction[0][3]
         sad_prob = emotion_prediction[0][4]
 
+        # Each point in the plot
+        # y-axis
         instant_happiness = happy_prob - sad_prob
         instant_surprise = fear_prob
+
+        # x-axis
         epoch = time.time()
 
+        # JSON format for your_file.json
         output = {
             'epoch': int(epoch*1000),
             'emotions': {
@@ -150,74 +135,68 @@ while True:
             }
         }
 
-        with open('/home/lfernandez/spaceai/your_file.json', 'a') as outfile:
+        # Writing the file
+        with open('/home/lfernandez/spaceai/emotions/feelings-api/your_file.json', 'a') as outfile:
             json.dump(output, outfile)
-            outfile.write("\n")
+            outfile.write(",")
 
-        if len(emotions_collected) < 4:
-            emotions_collected.append(emotion_prediction)
-            emotion_text_weighted = ''
-            emotion_probability_weighted = 0
-            continue
-        else:
-            emotions_collected.append(emotion_prediction)
-            weighted_face_in_time = weigh_up_emotion(emotions_collected)
+        # Keeps 5 last states before evaluating the emotion
 
-            angry_prob = emotion_prediction[0][0] + emotion_prediction[0][1]
-            fear_prob = emotion_prediction[0][2] + emotion_prediction[0][5]
-            happy_prob = emotion_prediction[0][3]
-            sad_prob = emotion_prediction[0][4]
+        emotions_collected.append(emotion_prediction)
+        weighted_face_in_time = weigh_up_emotion(emotions_collected)
 
-            emotions_collected = []
-            # emotions_collected.popleft()
+        angry_prob = emotion_prediction[0][0] + emotion_prediction[0][1]
+        fear_prob = emotion_prediction[0][2] + emotion_prediction[0][5]
+        happy_prob = emotion_prediction[0][3]
+        sad_prob = emotion_prediction[0][4]
 
-            # selecting maximum emotion along the last 5 frames
-            emotion_probability_weighted = np.max(weighted_face_in_time)
-            emotion_label_arg_weighted = np.argmax(weighted_face_in_time)
-            emotion_text_weighted = emotion_labels[emotion_label_arg_weighted]
-            emotion_window.append(emotion_text_weighted)
+        emotions_collected = []
+        # emotions_collected.popleft()
 
-            # keeping maximum instant of happiness
-            if emotion_text_weighted == 'happy' and happy_max < emotion_probability_weighted:
-                happy_max = emotion_probability_weighted
-                bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
-                cv2.imwrite('../images/predicted_test_image.png', bgr_image)
+        # selecting maximum emotion along the last 5 frames
+        # emotion_probability_weighted = np.max(weighted_face_in_time)
+        # emotion_label_arg_weighted = np.argmax(weighted_face_in_time)
+        # emotion_text_weighted = emotion_labels[emotion_label_arg_weighted]
+        # emotion_window.append(emotion_text_weighted)
 
-        logger.debug(
-            "frame {}, face {}, emotion: {}, probability: {:5.4f} ".format(nframe, nface, emotion_text_weighted,
-                                                                           emotion_probability_weighted))
+        # keeping maximum instant of happiness
+        # if emotion_text_weighted == 'happy' and happy_max < emotion_probability_weighted:
+        #     happy_max = emotion_probability_weighted
+        #     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+        #     cv2.imwrite('../images/predicted_test_image.png', bgr_image)
 
-        if len(emotion_window) > frame_window:
-            emotion_window.pop(0)
+        # logger.debug(
+        #     "frame {}, face {}, emotion: {}, probability: {:5.4f} ".format(nframe, nface, emotion_text_weighted,
+        #                                                                    emotion_probability_weighted))
+
+        # if len(emotion_window) > frame_window:
+        #     emotion_window.pop(0)
 
         # Video printing
         # coloring the selected emotion
-        if emotion_text_weighted == 'angry':
-            color_weighted = emotion_probability_weighted * np.asarray((255, 0, 0))
-        elif emotion_text_weighted == 'sad':
-            color_weighted = emotion_probability_weighted * np.asarray((0, 0, 255))
-        elif emotion_text_weighted == 'happy':
-            color_weighted = emotion_probability_weighted * np.asarray((255, 255, 0))
-        elif emotion_text_weighted == 'surprise':
-            color_weighted = emotion_probability_weighted * np.asarray((0, 255, 255))
-        else:
-            color_weighted = emotion_probability_weighted * np.asarray((0, 255, 0))
-
-        color_weighted = color_weighted.astype(int)
-        color_weighted = color_weighted.tolist()
+        # if emotion_text_weighted == 'angry':
+        #     color_weighted = emotion_probability_weighted * np.asarray((255, 0, 0))
+        # elif emotion_text_weighted == 'sad':
+        #     color_weighted = emotion_probability_weighted * np.asarray((0, 0, 255))
+        # elif emotion_text_weighted == 'happy':
+        #     color_weighted = emotion_probability_weighted * np.asarray((255, 255, 0))
+        # elif emotion_text_weighted == 'surprise':
+        #     color_weighted = emotion_probability_weighted * np.asarray((0, 255, 255))
+        # else:
+        #     color_weighted = emotion_probability_weighted * np.asarray((0, 255, 0))
+        #
+        # color_weighted = color_weighted.astype(int)
+        # color_weighted = color_weighted.tolist()
 
         # drawing box and text in the video
-        draw_text(face_coordinates, rgb_image, emotion_text_weighted,
-                  color_weighted, 0, -45, 1, 1)
-        draw_bounding_box(face_coordinates, rgb_image, color_weighted)
-        time_end = time.time()
-        time_total = time_end - time_init
-        print("time: {}".format(time_total))
+        # draw_text(face_coordinates, rgb_image, emotion_text_weighted,
+        #           color_weighted, 0, -45, 1, 1)
+        # draw_bounding_box(face_coordinates, rgb_image, color_weighted)
 
         nface += 1
 
 
-    bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+    # bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
     cv2.imshow('window_frame', bgr_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
