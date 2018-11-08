@@ -5,19 +5,9 @@ from keras.models import load_model
 import numpy as np
 import json
 
-#BDS
-import plotly
-from plotly.graph_objs import Scatter
-
-plotly.tools.set_credentials_file(username='loretof', api_key='1NgvRWDRYCJXm6qo2Ozp')
-
-import plotly.plotly as py
-import plotly.graph_objs as go
 
 from utils.datasets import get_labels
 from utils.inference import detect_faces
-from utils.inference import draw_text
-from utils.inference import draw_bounding_box
 from utils.inference import apply_offsets
 from utils.inference import load_detection_model
 from utils.preprocessor import preprocess_input
@@ -25,7 +15,6 @@ from collections import deque
 
 # weights for each of the last five states
 arr_prob = [0.05, 0.1, 0.15, 0.3, 0.4]   #total 1
-file = []
 
 # function that calculates a weighted relation for each emotion with its own previous states
 def weigh_up_emotion(arr):
