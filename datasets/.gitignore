@@ -2,3 +2,5 @@ gnore everything in this directory
 *
 # Except this file
 !.gitignore
+./**/your_file.json
+.idea/

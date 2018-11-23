@@ -14,5 +14,5 @@ ENV PYTHONPATH=$PYTHONPATH:src
 ENTRYPOINT ["python3"]
 CMD ["video_emotion_color_demo.py"]
 
-# docker run -ti --device=/dev/video0:/dev/video0 -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -v /tmp/.X11-unix/:/tmp/.X11-unix
+# # docker run -ti --device=/dev/video0:/dev/video0 -e DISPLAY=$DISPLAY -e QT_X11_NO_MITSHM=1 -v /tmp/.X11-unix/:/tmp/.X11-unix CLIENT_ID
 

@@ -61,7 +61,7 @@ logger = logging.getLogger(sys.argv[0].split('/')[-1])
 
 # starting video streaming
 cv2.namedWindow('window_frame')
-video_capture = cv2.VideoCapture(0)
+video_capture = cv2.VideoCapture(1)
 
 emotions_collected = deque()
 
@@ -71,7 +71,10 @@ happy_max = 0
 nframe = 1
 
 # Delete file "your_file.json" from previous executions
-os.remove('/home/lfernandez/spaceai/emotions/feelings-api/your_file.json')
+try:
+    os.remove('./feelings-api/data/your_file.json')
+except OSError:
+    pass
 
 while True:
     bgr_image = cv2.flip(video_capture.read()[1], 1)
@@ -125,7 +128,7 @@ while True:
         }
 
         # Writing the file
-        with open('/home/lfernandez/spaceai/emotions/feelings-api/your_file.json', 'a') as outfile:
+        with open('./feelings-api/data/your_file.json', 'a') as outfile:
             json.dump(output, outfile)
             outfile.write(",")
 

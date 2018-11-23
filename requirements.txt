@@ -18,6 +18,5 @@ scipy-extra==0.1
 six==1.11.0
 statistics==1.0.3.5
 tensorflow==1.1.0
-Theano==1.0.3
 Werkzeug==0.14.1
 profilehooks
