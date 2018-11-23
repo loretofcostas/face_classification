@@ -72,7 +72,7 @@ nframe = 1
 
 # Delete file "your_file.json" from previous executions
 try:
-    os.remove('./feelings-api/data/your_file.json')
+    os.remove('../../feelings-api/data/your_file.json')
 except OSError:
     pass
 
@@ -86,6 +86,26 @@ while True:
 
     # Count faces just for debugging purposes
     nface = 1
+
+    if faces.__len__() == 0:
+        # Each point in the plot
+        # y-axis
+        instant_happiness = 0
+        instant_surprise = 0
+
+
+        # JSON format for your_file.json
+        output = {
+            'emotions': {
+                'surprise': str(instant_surprise),
+                'happiness': str(instant_happiness)
+            }
+        }
+        # Writing the file
+        with open('../../feelings-api/data/your_file.json', 'a') as outfile:
+            json.dump(output, outfile)
+            outfile.write(",")
+
 
     # Goes over each face on the frame
     for face_coordinates in faces:
@@ -115,12 +135,9 @@ while True:
         instant_happiness = happy_prob - sad_prob
         instant_surprise = fear_prob
 
-        # x-axis
-        epoch = time.time()
 
         # JSON format for your_file.json
         output = {
-            'epoch': int(epoch*1000),
             'emotions': {
                 'surprise': str(instant_surprise),
                 'happiness': str(instant_happiness)
@@ -128,7 +145,7 @@ while True:
         }
 
         # Writing the file
-        with open('./feelings-api/data/your_file.json', 'a') as outfile:
+        with open('../../feelings-api/data/your_file.json', 'a') as outfile:
             json.dump(output, outfile)
             outfile.write(",")
 
