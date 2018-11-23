@@ -4,6 +4,7 @@ import logging, sys, time
 from keras.models import load_model
 import numpy as np
 import json
+import sys
 
 
 from utils.datasets import get_labels
@@ -102,6 +103,8 @@ while True:
             }
         }
         # Writing the file
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@2")
+        print(sys.path)
         with open('../../feelings-api/data/your_file.json', 'a') as outfile:
             json.dump(output, outfile)
             outfile.write(",")
