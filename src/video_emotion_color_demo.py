@@ -1,3 +1,5 @@
+import json
+import time
 from statistics import mode
 
 import cv2
@@ -58,30 +60,50 @@ while True:
         emotion_text = emotion_labels[emotion_label_arg]
         emotion_window.append(emotion_text)
 
+        # Format for report.json
+        output = {
+            'individual': 0,
+            'timestamp': time.time(),
+            'emotions': {
+                'angry':str(emotion_prediction[0][0]),
+                'disgust':str(emotion_prediction[0][1]),
+                'fear': str(emotion_prediction[0][2]),
+                'happiness': str(emotion_prediction[0][3]),
+                'sad': str(emotion_prediction[0][4]),
+                'surprise': str(emotion_prediction[0][5]),
+                'neutral': str(emotion_prediction[0][6])
+            }
+        }
+
+        # Writing the file
+        with open('../../fernando/video1/report.json', 'a') as outfile:
+            json.dump(output, outfile)
+            outfile.write(",")
+
         if len(emotion_window) > frame_window:
             emotion_window.pop(0)
         try:
             emotion_mode = mode(emotion_window)
         except:
             continue
-
-        if emotion_text == 'angry':
-            color = emotion_probability * np.asarray((255, 0, 0))
-        elif emotion_text == 'sad':
-            color = emotion_probability * np.asarray((0, 0, 255))
-        elif emotion_text == 'happy':
-            color = emotion_probability * np.asarray((255, 255, 0))
-        elif emotion_text == 'surprise':
-            color = emotion_probability * np.asarray((0, 255, 255))
-        else:
-            color = emotion_probability * np.asarray((0, 255, 0))
-
-        color = color.astype(int)
-        color = color.tolist()
-
-        draw_bounding_box(face_coordinates, rgb_image, color)
-        draw_text(face_coordinates, rgb_image, emotion_mode,
-                  color, 0, -45, 1, 1)
+        #
+        # if emotion_text == 'angry':
+        #     color = emotion_probability * np.asarray((255, 0, 0))
+        # elif emotion_text == 'sad':
+        #     color = emotion_probability * np.asarray((0, 0, 255))
+        # elif emotion_text == 'happy':
+        #     color = emotion_probability * np.asarray((255, 255, 0))
+        # elif emotion_text == 'surprise':
+        #     color = emotion_probability * np.asarray((0, 255, 255))
+        # else:
+        #     color = emotion_probability * np.asarray((0, 255, 0))
+        #
+        # color = color.astype(int)
+        # color = color.tolist()
+        #
+        # draw_bounding_box(face_coordinates, rgb_image, color)
+        # draw_text(face_coordinates, rgb_image, emotion_mode,
+        #           color, 0, -45, 1, 1)
 
     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
     cv2.imshow('window_frame', bgr_image)
