@@ -67,12 +67,12 @@ logger = logging.getLogger(sys.argv[0].split('/')[-1])
 # starting video streaming
 cv2.namedWindow('window_frame')
 emotions_collected = deque()
-video_capture = cv2.VideoCapture(1)
+video_capture = cv2.VideoCapture("/home/lfernandez/spaceai/propuesta_disa/video_cortado/inicio_barba.mp4")
 happy_max = 0
 
 
 # Count frames just for debugging purposes
-nframe = 1
+nframe = 0
 happiness_diagram = deque()
 angriness_diagram = deque()
 point = 0
@@ -87,7 +87,11 @@ lista = []
 label = False
 
 while True:
-    bgr_image = cv2.flip(video_capture.read()[1],1)
+    bgr_image = cv2.flip(video_capture.read()[1], 1)
+    nframe += 1
+    if (nframe % 5) != 0:
+        continue
+
     #bgr_image = video_capture.read()[1]
     gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
     rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
@@ -122,34 +126,37 @@ while True:
 
         # time calculation for x-axis
         now = time.time() - time_init
-        x_axis.append(now)
+        # x_axis.append(now)
 
         # emotion intensity for y-axis
-        y_axis_happiness.append(instant_happiness)
-        y_axis_angriness.append(instant_angriness)
+        # y_axis_happiness.append(instant_happiness)
+        # y_axis_angriness.append(instant_angriness)
 
         # Drawing "Emotions during time" diagram
-        axarr[0].set_xlim(now-5.0, now+5.0)
-        axarr[0].set_ylim(-1.0, 1.0)
-        axarr[0].spines['bottom'].set_position('zero')
-        if label == False:
-            axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
-            axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
-            label = True
-        else:
-            axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
-            axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
-        axarr[0].set_xlabel('time')
-        axarr[0].set_ylabel('Emotion intensity')
-        axarr[0].spines["top"].set_visible(False)
-        axarr[0].spines["right"].set_visible(False)
-        axarr[0].grid(False)
-        axarr[0].set_title('Emotions during time')
-        plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
+        # axarr[0].set_xlim(now-5.0, now+5.0)
+        # axarr[0].set_ylim(-1.0, 1.0)
+        # axarr[0].spines['bottom'].set_position('zero')
+        # if label == False:
+        #     axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
+        #     axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
+        #     label = True
+        # else:
+        #     axarr[0].plot(x_axis, y_axis_angriness, c='r', label='angry(+) -> fear(-)')
+        #     axarr[0].plot(x_axis, y_axis_happiness, c='b', label='happy(+) -> sad(-)')
+        # axarr[0].set_xlabel('time')
+        # axarr[0].set_ylabel('Emotion intensity')
+        # axarr[0].spines["top"].set_visible(False)
+        # axarr[0].spines["right"].set_visible(False)
+        # axarr[0].grid(False)
+        # axarr[0].set_title('Emotions during time')
+        # plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
 
         #writing data for postprocessing
-        with open('/home/lfernandez/spaceai/your_file.txt', 'a') as f:
-            f.write("%s\n" % str([now, instant_happiness, instant_angriness]))
+        with open('/home/lfernandez/spaceai/propuesta_disa/your_file.txt', 'a') as f:
+            str_val = str(nframe) + ',' + '{:f}'.format(emotion_prediction[0][0]) + ',' + '{:f}'.format(emotion_prediction[0][1]) + ','
+            str_val = str_val + '{:f}'.format(emotion_prediction[0][2]) + ',' + '{:f}'.format(emotion_prediction[0][3]) + ',' + '{:f}'.format(emotion_prediction[0][4]) + ','
+            str_val = str_val + '{:f}'.format(emotion_prediction[0][5]) + ',' + '{:f}'.format(emotion_prediction[0][6]) + '\n'
+            f.write(str_val)
         f.close()
 
         # Drawing "Emotional Landscape" diagram
@@ -161,7 +168,7 @@ while True:
         axarr[1].set_ylim(-1.0, 1.0)
         axarr[1].grid(False)
         axarr[1].scatter(instant_happiness, instant_angriness, c='#37b5e4', s=10)
-        axarr[1].set_title('Emotional Landscape')
+        #axarr[1].set_title('Emotional Landscape')
         axarr[1].annotate('fear',
                           xy=(245, 30), xycoords='figure points')
         axarr[1].annotate('angry',
@@ -175,30 +182,32 @@ while True:
         plt.savefig('/home/lfernandez/spaceai/EmDiagram.png')
 
 
-        if len(emotions_collected) < 4:
-            emotions_collected.append(emotion_prediction)
-            emotion_text_weighted = ''
-            emotion_probability_weighted = 0
-            continue
-        else:
-            emotions_collected.append(emotion_prediction)
-            weighted_face_in_time = weigh_up_emotion(emotions_collected)
-            emotions_collected = []
-            #emotions_collected.popleft()
+        # if len(emotions_collected) < 4:
+        #     emotions_collected.append(emotion_prediction)
+        #     emotion_text_weighted = ''
+        #     emotion_probability_weighted = 0
+        #     continue
+        # else:
+        #     emotions_collected.append(emotion_prediction)
+        #     weighted_face_in_time = weigh_up_emotion(emotions_collected)
+        #     emotions_collected = []
+        #     #emotions_collected.popleft()
 
-            #selecting maximum emotion along the last 5 frames
-            emotion_probability_weighted = np.max(weighted_face_in_time)
-            emotion_label_arg_weighted = np.argmax(weighted_face_in_time)
-            emotion_text_weighted = emotion_labels[emotion_label_arg_weighted]
-            emotion_window.append(emotion_text_weighted)
+            # #selecting maximum emotion along the last 5 frames
+            # emotion_probability_weighted = np.max(weighted_face_in_time)
+            # emotion_label_arg_weighted = np.argmax(weighted_face_in_time)
+            # emotion_text_weighted = emotion_labels[emotion_label_arg_weighted]
+            # emotion_window.append(emotion_text_weighted)
 
-            #keeping maximum instant of happiness
-            if emotion_text_weighted == 'happy' and happy_max < emotion_probability_weighted:
-                happy_max = emotion_probability_weighted
-                bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
-                cv2.imwrite('../images/predicted_test_image.png', bgr_image)
+            # #keeping maximum instant of happiness
+            # if emotion_text_weighted == 'happy' and happy_max < emotion_probability_weighted:
+            #     happy_max = emotion_probability_weighted
+            #     bgr_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
+            #     cv2.imwrite('../images/predicted_test_image.png', bgr_image)
 
-        logger.debug("frame {}, face {}, emotion: {}, probability: {:5.4f} ".format(nframe, nface, emotion_text_weighted, emotion_probability_weighted))
+        logger.debug("frame {}, face {}".format(nframe, nface))
+
+        #logger.debug("frame {}, face {}, emotion: {}, probability: {:5.4f} ".format(nframe, nface, emotion_text_weighted, emotion_probability_weighted))
 
 
         if len(emotion_window) > frame_window:
@@ -210,24 +219,24 @@ while True:
 
         #Video printing
         #coloring the selected emotion
-        if emotion_text_weighted == 'angry':
-            color_weighted = emotion_probability_weighted * np.asarray((255, 0, 0))
-        elif emotion_text_weighted == 'sad':
-            color_weighted = emotion_probability_weighted * np.asarray((0, 0, 255))
-        elif emotion_text_weighted == 'happy':
-            color_weighted = emotion_probability_weighted * np.asarray((255, 255, 0))
-        elif emotion_text_weighted == 'fear':
-            color_weighted = emotion_probability_weighted * np.asarray((0, 255, 255))
-        else:
-            color_weighted = emotion_probability_weighted * np.asarray((0, 255, 0))
-
-        color_weighted = color_weighted.astype(int)
-        color_weighted = color_weighted.tolist()
+        # if emotion_text_weighted == 'angry':
+        #     color_weighted = emotion_probability_weighted * np.asarray((255, 0, 0))
+        # elif emotion_text_weighted == 'sad':
+        #     color_weighted = emotion_probability_weighted * np.asarray((0, 0, 255))
+        # elif emotion_text_weighted == 'happy':
+        #     color_weighted = emotion_probability_weighted * np.asarray((255, 255, 0))
+        # elif emotion_text_weighted == 'fear':
+        #     color_weighted = emotion_probability_weighted * np.asarray((0, 255, 255))
+        # else:
+        #     color_weighted = emotion_probability_weighted * np.asarray((0, 255, 0))
+        #
+        # color_weighted = color_weighted.astype(int)
+        # color_weighted = color_weighted.tolist()
 
         #drawing box and text in the video
-        draw_text(face_coordinates, rgb_image, emotion_text_weighted,
-                  color_weighted, 0, -45, 1, 1)
-        draw_bounding_box(face_coordinates, rgb_image, color_weighted)
+        # draw_text(face_coordinates, rgb_image, emotion_text_weighted,
+        #           color_weighted, 0, -45, 1, 1)
+        # draw_bounding_box(face_coordinates, rgb_image, color_weighted)
 
         nface += 1
 
@@ -235,4 +244,3 @@ while True:
     cv2.imshow('window_frame', bgr_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    nframe += 1
